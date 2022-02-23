@@ -1,0 +1,18 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8ac86a1..99a39af 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -399,8 +399,11 @@ endif ()
+ # Installation
+ #
+ 
+-
+-find_program(GNUSTEP_CONFIG gnustep-config)
++#
++# XXX - we don't want to find gnustep-config as it can't be run when installing
++# an [x86|x64]-windows VCPKG port
++#
++# find_program(GNUSTEP_CONFIG gnustep-config)
+ if (GNUSTEP_CONFIG)
+ 	EXEC_PROGRAM(gnustep-config
+ 		ARGS "--installation-domain-for=libobjc2"

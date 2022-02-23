@@ -16,7 +16,6 @@ set(SOURCE_PATH ${CURRENT_BUILDTREES_DIR}/src/${PORT})
 find_program(GIT git)
 
 set(GIT_URL "https://github.com/gnustep/libobjc2.git")
-set(GIT_REF 2.1)
 
 if(NOT EXISTS "${SOURCE_PATH}/.git")
     # message(STATUS "Cloning and fetching submodules")
@@ -26,16 +25,17 @@ if(NOT EXISTS "${SOURCE_PATH}/.git")
         LOGNAME clone
     )
 
-    # message(STATUS "Checkout")
-    vcpkg_execute_required_process(
-        COMMAND ${GIT} checkout v${GIT_REF}
-        WORKING_DIRECTORY ${SOURCE_PATH}
-        LOGNAME checkout
+    # message(STATUS "Patch")
+    vcpkg_apply_patches(
+        SOURCE_PATH "${SOURCE_PATH}"
+        PATCHES
+            0001-fix-cmake-install.patch   
     )
 endif()
 
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
+    GENERATOR Ninja
 )
 
 vcpkg_cmake_install()
