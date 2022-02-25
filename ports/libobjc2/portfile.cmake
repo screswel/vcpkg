@@ -5,9 +5,6 @@ set(VCPKG_CHAINLOAD_TOOLCHAIN_FILE "${CURRENT_BUILDTREES_DIR}/../../scripts/tool
 set(VCPKG_POLICY_SKIP_ARCHITECTURE_CHECK enabled)
 set(VCPKG_POLICY_SKIP_DUMPBIN_CHECKS enabled)
 
-# XXX - setup Visual Studio environment - even though VCPKG_CHAINLOAD_TOOLCHAIN_FILE is set
-set(VCPKG_LOAD_VCVARS_ENV ON)
-
 # XXX - ensure clang-cl can treat all objc/objc++ files as c/c++ files
 set(ENV{CCC_OVERRIDE_OPTIONS} "x-TC x-TP x/TC x/TP")
 

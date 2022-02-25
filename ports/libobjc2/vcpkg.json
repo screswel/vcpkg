@@ -1,6 +1,6 @@
 {
   "name": "libobjc2",
-  "version": "2.1",
+  "version-string": "HEAD",
   "port-version": 1,
   "description": "Objective-C runtime library intended for use with Clang",
   "homepage": "https://github.com/gnustep/libobjc2",
@@ -12,6 +12,7 @@
     {
       "name": "vcpkg-cmake-config",
       "host": true
-    }
+    },
+    "llvm"
   ]
 }
