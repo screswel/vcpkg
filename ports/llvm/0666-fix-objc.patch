@@ -1,0 +1,117 @@
+diff --git a/clang/lib/CodeGen/CGObjCGNU.cpp b/clang/lib/CodeGen/CGObjCGNU.cpp
+--- a/clang/lib/CodeGen/CGObjCGNU.cpp
++++ b/clang/lib/CodeGen/CGObjCGNU.cpp
+@@ -1657,7 +1657,7 @@
+         if (global) {
+           llvm::GlobalVariable *GV = lateInit.second.first;
+           b.CreateAlignedStore(
+-              global,
++              llvm::ConstantExpr::getBitCast(global, PtrTy),
+               b.CreateStructGEP(GV->getValueType(), GV, lateInit.second.second),
+               CGM.getPointerAlign().getAsAlign());
+         }
+@@ -1686,14 +1686,33 @@
+       + '.' + Ivar->getNameAsString() + '.' + TypeEncoding;
+     return Name;
+   }
+-  llvm::Value *EmitIvarOffset(CodeGenFunction &CGF,
++
++  llvm::GlobalVariable *EmitIvarOffsetVariable(
+                               const ObjCInterfaceDecl *Interface,
+-                              const ObjCIvarDecl *Ivar) override {
++                              const ObjCIvarDecl *Ivar) {
+     const std::string Name = GetIVarOffsetVariableName(Ivar->getContainingInterface(), Ivar);
+     llvm::GlobalVariable *IvarOffsetPointer = TheModule.getNamedGlobal(Name);
+-    if (!IvarOffsetPointer)
++    if (!IvarOffsetPointer) {
+       IvarOffsetPointer = new llvm::GlobalVariable(TheModule, IntTy, false,
+               llvm::GlobalValue::ExternalLinkage, nullptr, Name);
++      if (CGM.getTriple().isOSBinFormatCOFF()) {
++        if (Interface->hasAttr<DLLExportAttr>() &&
++            (Ivar->getCanonicalAccessControl() != ObjCIvarDecl::Private) &&
++            (Ivar->getCanonicalAccessControl() != ObjCIvarDecl::Package))
++          IvarOffsetPointer->setDLLStorageClass(
++            llvm::GlobalValue::DLLExportStorageClass);
++        else if (Interface->hasAttr<DLLImportAttr>())
++          IvarOffsetPointer->setDLLStorageClass(
++            llvm::GlobalValue::DLLImportStorageClass);
++      }
++    }
++    return IvarOffsetPointer;
++  }
++
++  llvm::Value *EmitIvarOffset(CodeGenFunction &CGF,
++                              const ObjCInterfaceDecl *Interface,
++                              const ObjCIvarDecl *Ivar) override {
++    llvm::GlobalVariable *IvarOffsetPointer = EmitIvarOffsetVariable(Interface, Ivar);
+     CharUnits Align = CGM.getIntAlign();
+     llvm::Value *Offset =
+         CGF.Builder.CreateAlignedLoad(IntTy, IvarOffsetPointer, Align);
+@@ -1851,14 +1870,8 @@
+         uint64_t BaseOffset = ComputeIvarBaseOffset(CGM, OID, IVD);
+         uint64_t Offset = BaseOffset - superInstanceSize;
+         llvm::Constant *OffsetValue = llvm::ConstantInt::get(IntTy, Offset);
+-        std::string OffsetName = GetIVarOffsetVariableName(classDecl, IVD);
+-        llvm::GlobalVariable *OffsetVar = TheModule.getGlobalVariable(OffsetName);
+-        if (OffsetVar)
+-          OffsetVar->setInitializer(OffsetValue);
+-        else
+-          OffsetVar = new llvm::GlobalVariable(TheModule, IntTy,
+-            false, llvm::GlobalValue::ExternalLinkage,
+-            OffsetValue, OffsetName);
++        llvm::GlobalVariable *OffsetVar = EmitIvarOffsetVariable(classDecl, IVD);
++        OffsetVar->setInitializer(OffsetValue);
+         auto ivarVisibility =
+             (IVD->getAccessControl() == ObjCIvarDecl::Private ||
+              IVD->getAccessControl() == ObjCIvarDecl::Package ||
+diff --git a/clang/test/CodeGenObjC/gnustep2-dllexport-ivar.m b/clang/test/CodeGenObjC/gnustep2-dllexport-ivar.m
+new file mode 100644
+--- /dev/null
++++ b/clang/test/CodeGenObjC/gnustep2-dllexport-ivar.m
+@@ -0,0 +1,46 @@
++// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s
++
++__attribute__((dllexport))
++@interface Cls
++{
++  int implicit_prot;
++  @public
++  int pub;
++  @protected
++  int prot;
++  @private
++  int priv;
++  @package
++  int pkg;
++}
++@end
++@implementation Cls @end
++
++// CHECK: @__objc_ivar_offset_Cls.implicit_prot.i = dllexport global i32 0
++// CHECK: @__objc_ivar_offset_Cls.pub.i = dllexport global i32 4
++// CHECK: @__objc_ivar_offset_Cls.prot.i = dllexport global i32 8
++// CHECK: @__objc_ivar_offset_Cls.priv.i = hidden global i32 12
++// CHECK: @__objc_ivar_offset_Cls.pkg.i = hidden global i32 16
++
++__attribute__((dllimport))
++@interface ClsImport
++{
++  int implicit_prot;
++  @public
++  int pub;
++  @protected
++  int prot;
++}
++@end
++
++@interface Sub : ClsImport @end
++
++@implementation Sub
++- (id)init
++{
++  implicit_prot = 0;
++  pub = 1;
++  prot = 2;
++  return self;
++}
++@end

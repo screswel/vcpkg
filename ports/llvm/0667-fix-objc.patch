@@ -1,0 +1,13 @@
+diff --git a/clang/lib/CodeGen/CGObjCGNU.cpp b/clang/lib/CodeGen/CGObjCGNU.cpp
+--- a/clang/lib/CodeGen/CGObjCGNU.cpp
++++ b/clang/lib/CodeGen/CGObjCGNU.cpp
+@@ -1681,7 +1681,7 @@
+    CGM.getContext().getObjCEncodingForType(Ivar->getType(), TypeEncoding);
+    // Prevent the @ from being interpreted as a symbol version.
+    std::replace(TypeEncoding.begin(), TypeEncoding.end(),
+-       '@', '\1');
++       '=', '\2');
+    const std::string Name = "__objc_ivar_offset_" + ID->getNameAsString()
+      + '.' + Ivar->getNameAsString() + '.' + TypeEncoding;
+    return Name;
+    
