@@ -23,6 +23,16 @@ bootstrap-vcpkg.bat -disableMetrics
 exit
 ```
 
+Install vcpkg LLVM toolchain - this is patched for Windows-specific Objective-C issues:
+```cmd
+Start an "x64 Native Tools Command Prompt for VS 2019" shell
+cd c:\
+cd src
+cd vcpkg
+vcpkg install llvm:x64-windows
+exit
+```
+
 Edit path variable:
 ```cmd
 Type "Control Panel" into the Windows Search Box and hit <return>
@@ -45,7 +55,7 @@ where clang
 exit
 ```
 
-Install vcpkg-provided libraries:
+Install vcpkg libraries:
 ```cmd
 Start an "x64 Native Tools Command Prompt for VS 2019" shell
 cd c:\
